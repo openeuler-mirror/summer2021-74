@@ -1,0 +1,5 @@
+      1 consume_skb+0x3c/0xa0 skb_release_data arg1=0x0
+      1 consume_skb+0x3c/0xa0 skb_release_data arg1=0x10002
+      1 consume_skb+0x3c/0xa0 skb_release_data arg1=0x10003
+      1 consume_skb+0x3c/0xa0 skb_release_data arg1=0x2
+      3 __kfree_skb+0x20/0x30 skb_release_data arg1=0x0

@@ -1,0 +1,7 @@
+      1 copy_process+0xa3e/0x1290 ktime_get_with_offset arg1=0x642d27bafbb
+      1 copy_process+0xa3e/0x1290 ktime_get_with_offset arg1=0x642d27d09c9
+      1 copy_process+0xa3e/0x1290 ktime_get_with_offset arg1=0x642d27e4a91
+      1 copy_process+0xa3e/0x1290 ktime_get_with_offset arg1=0x642d27fd150
+      1 copy_process+0xa3e/0x1290 ktime_get_with_offset arg1=0x642d2815606
+      1 do_sysinfo+0x34/0x140 ktime_get_with_offset arg1=0x642d28ccdbd
+      1 do_sysinfo+0x34/0x140 ktime_get_with_offset arg1=0x642d28cd993

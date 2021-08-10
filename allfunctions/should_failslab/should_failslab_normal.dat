@@ -1,0 +1,2 @@
+    136 slab_pre_alloc_hook.constprop.0+0x2b/0xe0 should_failslab arg1=0x0
+   1787 slab_pre_alloc_hook.constprop.0+0x8a/0xe0 should_failslab arg1=0x0

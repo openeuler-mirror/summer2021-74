@@ -1,0 +1,4 @@
+      1 dma_unmap_page_attrs+0x131/0x1c0 swiotlb_tbl_sync_single arg1=0x101ae8002
+      1 dma_unmap_page_attrs+0x131/0x1c0 swiotlb_tbl_sync_single arg1=0x101b0a10a
+      1 dma_unmap_page_attrs+0x131/0x1c0 swiotlb_tbl_sync_single arg1=0x1312a8064
+      1 e1000_copybreak.isra.0+0x61/0x90 <- swiotlb_tbl_sync_single

@@ -1,0 +1,13 @@
+      2 __alloc_skb+0x57/0x1d0 kmem_cache_alloc_node arg1=0xffff8e4207d0eb00
+      1 __alloc_skb+0x57/0x1d0 kmem_cache_alloc_node arg1=0xffff8e42109c3e00
+      1 alloc_vmap_area+0x3d9/0x900 kmem_cache_alloc_node arg1=0xffff8e4204ccf040
+      1 alloc_vmap_area+0x3d9/0x900 kmem_cache_alloc_node arg1=0xffff8e4204ccf080
+      1 alloc_vmap_area+0x3d9/0x900 kmem_cache_alloc_node arg1=0xffff8e4204ccfc80
+      1 alloc_vmap_area+0x8b/0x900 kmem_cache_alloc_node arg1=0xffff8e4204ccf0c0
+      1 alloc_vmap_area+0x8b/0x900 kmem_cache_alloc_node arg1=0xffff8e4204ccf840
+      1 alloc_vmap_area+0x8b/0x900 kmem_cache_alloc_node arg1=0xffff8e4204ccfa40
+      1 dup_task_struct+0x2c/0x1a0 kmem_cache_alloc_node arg1=0xffff8e4200263000
+      1 dup_task_struct+0x2c/0x1a0 kmem_cache_alloc_node arg1=0xffff8e42019c9800
+      1 dup_task_struct+0x2c/0x1a0 kmem_cache_alloc_node arg1=0xffff8e42058bb000
+      1 dup_task_struct+0x2c/0x1a0 kmem_cache_alloc_node arg1=0xffff8e42080b9800
+      1 dup_task_struct+0x2c/0x1a0 kmem_cache_alloc_node arg1=0xffff8e42080bc800

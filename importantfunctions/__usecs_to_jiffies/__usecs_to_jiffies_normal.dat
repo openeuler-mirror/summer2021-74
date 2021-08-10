@@ -1,0 +1,5 @@
+      2 net_rx_action+0x3b/0x1b0 __usecs_to_jiffies arg1=0x2
+      1 tcp_ack_update_rtt.isra.0+0x7c/0x150 __usecs_to_jiffies arg1=0xde
+      1 tcp_rearm_rto.part.0+0xc6/0x100 __usecs_to_jiffies arg1=0xdc
+      1 tcp_schedule_loss_probe.part.0+0x26/0x140 __usecs_to_jiffies arg1=0x30
+      1 tcp_schedule_loss_probe.part.0+0x51/0x140 __usecs_to_jiffies arg1=0xdc

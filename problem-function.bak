@@ -1,0 +1,23 @@
+_cond_resched
+rcu_all_qs
+_cond_resched 
+rcu_all_qs
+__check_object_size 
+check_stack_object
+__virt_addr_valid
+__check_heap_object
+kfree
+ipv4_conntrack_defrag [nf_defrag_ipv4]
+_raw_spin_lock_irqsave
+_raw_spin_unlock_irqrestore
+_raw_spin_lock
+_raw_spin_lock
+_raw_spin_lock_irqsave
+_raw_spin_unlock_irqrestore
+_raw_spin_lock_irqsave
+_raw_spin_unlock_irqrestore
+_raw_spin_lock
+_raw_spin_lock
+_raw_spin_lock
+_raw_spin_lock_irqsave
+_raw_spin_unlock_irqrestore

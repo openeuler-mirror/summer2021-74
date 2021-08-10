@@ -1,0 +1,1 @@
+      2 e1000_unmap_and_free_tx_resource.isra.0+0x47/0x60 <- __dev_kfree_skb_any

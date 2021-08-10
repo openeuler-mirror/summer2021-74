@@ -1,0 +1,4 @@
+      1 e1000_copybreak.isra.0+0x61/0x90 <- swiotlb_bounce
+      1 swiotlb_tbl_map_single+0x33a/0x340 swiotlb_bounce arg1=0xffff8e419e72f000
+      1 swiotlb_tbl_map_single+0x33a/0x340 swiotlb_bounce arg1=0xffff8e419e72f800
+      1 swiotlb_tbl_map_single+0x33a/0x340 swiotlb_bounce arg1=0xffff8e419e730000

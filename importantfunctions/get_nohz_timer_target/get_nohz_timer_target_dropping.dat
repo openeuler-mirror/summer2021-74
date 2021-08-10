@@ -1,0 +1,5 @@
+      1 __mod_timer+0x334/0x400 get_nohz_timer_target arg1=0x0
+      2 __mod_timer+0x334/0x400 get_nohz_timer_target arg1=0x1
+      3 __mod_timer+0x334/0x400 get_nohz_timer_target arg1=0x3
+      1 switch_hrtimer_base+0xf4/0x110 get_nohz_timer_target arg1=0x3
+      1 switch_hrtimer_base+0xf4/0x110 get_nohz_timer_target arg1=0x4

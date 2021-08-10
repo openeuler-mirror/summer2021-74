@@ -1,0 +1,2 @@
+      1 dma_direct_map_page+0x105/0x1a0 swiotlb_map arg1=0x9dcb6800
+      1 dma_direct_map_page+0x105/0x1a0 swiotlb_map arg1=0x9dcb7000

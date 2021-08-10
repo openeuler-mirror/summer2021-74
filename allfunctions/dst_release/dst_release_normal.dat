@@ -1,0 +1,3 @@
+      1 __dev_queue_xmit+0x2c4/0x3b0 dst_release arg1=0x0
+      1 __ip_make_skb+0x300/0x420 dst_release arg1=0x0
+      1 udp_sendmsg+0x31f/0xe40 dst_release arg1=0x0

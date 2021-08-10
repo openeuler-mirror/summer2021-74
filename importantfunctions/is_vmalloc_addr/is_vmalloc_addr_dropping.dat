@@ -1,0 +1,2 @@
+      1 dma_map_single_attrs.constprop.0+0x1a/0xc0 <- is_vmalloc_addr
+      1 kvfree+0xe/0x30 is_vmalloc_addr arg1=0x0

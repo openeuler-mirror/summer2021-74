@@ -1,0 +1,2 @@
+      1 __mod_timer+0x253/0x400 calc_wheel_index arg1=0x10
+      1 __mod_timer+0x253/0x400 calc_wheel_index arg1=0xc

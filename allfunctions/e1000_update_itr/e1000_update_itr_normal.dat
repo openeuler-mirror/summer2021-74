@@ -1,0 +1,2 @@
+      1 e1000_set_itr+0x46/0x110 <- e1000_update_itr
+      1 e1000_set_itr+0xeb/0x110 <- e1000_update_itr

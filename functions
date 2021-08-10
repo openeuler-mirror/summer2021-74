@@ -1,0 +1,7 @@
+skb_release_data
+skb_release_head_state
+dequeue_skb
+calc_wheel_index
+__ksize
+skb_put
+sock_wfree

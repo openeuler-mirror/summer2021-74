@@ -1,0 +1,2 @@
+      2 dev_queue_xmit_nit+0x1dd/0x1e0 packet_rcv arg1=0x0
+      1 __netif_receive_skb_core+0x3c9/0x710 packet_rcv arg1=0x0

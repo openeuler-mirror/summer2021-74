@@ -1,0 +1,2 @@
+      1 __ip_queue_xmit+0x17e/0x400 ip_output arg1=0x0
+      1 ip_send_skb+0x3e/0x70 ip_output arg1=0x0

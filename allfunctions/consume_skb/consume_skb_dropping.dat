@@ -1,0 +1,3 @@
+      1 e1000_unmap_and_free_tx_resource.isra.0+0x47/0x60 <- consume_skb
+      1 packet_rcv+0x43/0x410 consume_skb arg1=0x0
+      1 packet_rcv+0x43/0x410 consume_skb arg1=0x2

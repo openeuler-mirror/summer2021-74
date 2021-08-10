@@ -1,0 +1,3 @@
+      3 del_timer_sync+0x58/0xb0 detach_if_pending arg1=0x0
+      3 __mod_timer+0x15c/0x400 detach_if_pending arg1=0x0
+      1 __mod_timer+0x15c/0x400 detach_if_pending arg1=0x1

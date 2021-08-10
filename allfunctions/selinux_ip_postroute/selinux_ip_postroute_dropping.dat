@@ -1,0 +1,1 @@
+      2 nf_hook_slow+0x40/0xb0 selinux_ip_postroute arg1=0x1

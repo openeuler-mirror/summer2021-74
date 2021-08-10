@@ -1,0 +1,1 @@
+      2 e1000_unmap_and_free_tx_resource.isra.0+0x2d/0x60 <- swiotlb_tbl_unmap_single

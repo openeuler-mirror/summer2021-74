@@ -1,0 +1,10 @@
+      1 __dev_queue_xmit+0x224/0x3b0 __local_bh_enable_ip arg1=0x80000201
+      1 __dev_queue_xmit+0x224/0x3b0 __local_bh_enable_ip arg1=0x80000301
+      5 fpu__clear+0x5e/0x90 __local_bh_enable_ip arg1=0x80000000
+      5 fpu__copy+0x7f/0x120 __local_bh_enable_ip arg1=0x80000000
+      1 ip_finish_output2+0x12b/0x280 __local_bh_enable_ip arg1=0x80000000
+      1 ip_finish_output2+0x12b/0x280 __local_bh_enable_ip arg1=0x80000101
+     15 ipt_do_table+0x27b/0x3c0 <- __local_bh_enable_ip
+      3 nf_conntrack_tcp_packet+0x23d/0xa50 <- __local_bh_enable_ip
+      1 tcp_sendmsg+0x1a/0x40 __local_bh_enable_ip arg1=0x80000000
+      1 tcp_sendmsg+0x33/0x40 __local_bh_enable_ip arg1=0x80000000
