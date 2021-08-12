@@ -5,11 +5,14 @@ TRACE=trace
 TRACING_ON=tracing_on
 MYRETPROBE_ENABLE=events/kprobes/myretprobe/enable
 KPROBE_EVENTS=kprobe_events
+MYRETPROBE=myretprobe
 
 traceInit () {
 
 	echo 0 > "${TRACE_DIR}/${TRACING_ON}"
-	echo 0 > "${TRACE_DIR}/${MYRETPROBE_ENABLE}"
+	if [ -e "${TRACE_DIR}/${MYRETPROBE_ENABLE}" ];then
+		echo 0 > "${TRACE_DIR}/${MYRETPROBE_ENABLE}"
+	fi
 	echo > "${TRACE_DIR}/${TRACE}" 
 	#echo '                  ---traceInit---                '
 }
@@ -27,16 +30,16 @@ kretprobeAddFunction () {
 		echo "At least one parameter needed for KretprobeAddFunction!"
 		return -1
 	fi
-	
+
 	echo 'r:myretprobe '$1' $retval' >> "${TRACE_DIR}/${KPROBE_EVENTS}"
-	
+
 	return 0
 
 }
 kretprobeDelFunction () {
 	#clear kprobe_events
-	
-	
+
+
 	echo > "${TRACE_DIR}/${KPROBE_EVENTS}"
 	#echo '-:myretprobe' > "${TRACE_DIR}/${KPROBE_EVENTS}"
 }
@@ -51,55 +54,10 @@ getFunctionName () {
 	echo $1 | awk '{print $6}' | grep -oP '(\().*(\+)' | sed 's/(//;s/+//' 
 }
 !
-:<<!
-traceProcess () {
-	#This function gets name of functions which return non-zero 
-	#by processing raw trace log.
-	#'trace_data.tmp' is a copy of raw trace log
-	#'tmp' file will be deleted at the end of this function.
 
-
-	tail -n +12 $TRACE_DIR/$TRACE >> trace_data.tmp
-	tail -n +12 $TRACE_DIR/$TRACE >> trace_mydata_debug.tmp
-	echo > $TRACE_DIR/$TRACE &
-
-	while read LINE
-	do
-
-		$RET=`echo $LINE | grep -o 'arg1=.*' | awk -F '=' '{print $2}'`
-		if [ $RET != '0x0' ];then
-			echo 'functions return non-zero'
-			#echo $LINE | awk '{print $8}' | sed 's/)//' >> functions_suspicious.dat
-			echo $LINE | awk '{print $8}' | sed 's/)//'
-			echo ' '
-			#getFunctionName $LINE >> functions_suspicious.dat
-			#echo $LINE | awk '{print $6}' | grep -oP '(\().*(\+)' | sed 's/(//;s/+//' >> functions_suspicious.dat
-		fi	
-	done < trace_data.tmp
-	#cat trace_data.tmp | grep -o 'arg1=.*' | awk -F '=' '{print $2}'
-	#rm trace_data.tmp
-}
-!
-
-:<<!
 traceReport () {
-	DATE=`date --iso-8601='s'`
-	case $1 in
-		kfree_skb.part.skb_release_data)
-			echo "[${DATE}]DROPPING DETECTED -----> skb_release_data"
-			;;
-		kfree_skb.part.skb_release_head_state)
-			echo "[${DATE}]DROPPING DETECTED -----> skb_release_head_state"
-			;;
-		dequeue_skb)
-			echo "[${DATE}]DROPPING DETECTED -----> skb_release_head_state"
-			;;
-	esac
-}
-!
-traceReport () {
-	FUNCTIONNAME=$1
-	DATE=`date --iso-8601='s'`
+	local FUNCTIONNAME=$1
+	local DATE=`date --iso-8601='s'`
 	echo "[${DATE}]DROPPING DETECTED -----> ${FUNCTIONNAME}"
 }
 
@@ -107,6 +65,55 @@ traceProcessDebug () {
 	tail -n +12 $TRACE_DIR/$TRACE | awk '{print $6,$8,$9}' | sed 's/(//; s/)//' | sort -n | uniq -c
 
 }
+
+traceKfreeskb() {
+	local TEMPFILE=kfreeskb.tmp
+
+
+	if [ -e "$TEMPFILE" ];then
+		while read FUNCTION
+		do
+			traceReport $FUNCTION
+		done < $TEMPFILE
+
+		rm $TEMPFILE
+		sed -i '/<- kfree_skb/d' $1
+	fi
+}
+traceOthers () {
+	local TEMPFILE=others.tmp
+
+	cat $1 | awk '{print $6,$8,$9}' | sed 's/(//; s/)//' | sort -n | uniq -c > $TEMPFILE
+	#tail -n +12 $TRACE_DIR/$TRACE | awk '{print $6,$8,$9}' | sed 's/(//; s/)//' | sort -n | uniq -c > $TEMPFILE
+	if [ -e "${TEMPFILE}" ];then
+		#examine skb_release_data 
+		FUNCTION=`cat ${TEMPFILE} | grep skb_release_data | grep -o kfree_skb.part`
+		if [ "$FUNCTION" == "kfree_skb.part" ];then
+			traceReport skb_release_data
+		fi
+		sed -i '/skb_release_data/d' $TEMPFILE
+		sed -i '/skb_release_data/d' $1
+
+		#examine skb_release_head_state
+		FUNCTION=`cat ${TEMPFILE} | grep skb_release_head_state | grep -o kfree_skb.part`
+		if [ "$FUNCTION" == "kfree_skb.part" ];then
+			traceReport skb_release_head_state
+		fi
+		sed -i '/skb_release_head_state/d' $TEMPFILE
+		sed -i '/skb_release_head_state/d' $1
+
+		#detect dequeue_skb
+		RETVALUE=`cat ${TEMPFILE} | grep dequeue_skb | grep -o 'arg1=.*' | uniq | awk -F '=' '{print $2}'`
+		if [ "$RETVALUE" != "0x0" -a "$RETVALUE" != "" ];then
+			traceReport dequeue_skb
+		fi
+		sed -i '/dequeue_skb/d' $TEMPFILE
+		sed -i '/dequeue_skb/d' $1
+
+		rm $TEMPFILE
+	fi
+}
+
 traceProcess () {
 	#This function examine all suspicious functions 
 	#by processing raw trace log.
@@ -121,32 +128,15 @@ traceProcess () {
 	#'tmp' file will be deleted at the end of this function.
 
 
-	TEMPFILE=tracedata.tmp
+	local TEMPFILE=tracedata.tmp
+	tail -n +12 $TRACE_DIR/$TRACE | grep $MYRETPROBE > $TEMPFILE
 
-	tail -n +12 $TRACE_DIR/$TRACE | awk '{print $6,$8,$9}' | sed 's/(//; s/)//' | sort -n | uniq -c > $TEMPFILE
-	
-	#examine skb_release_data 
-	FUNCTION=`cat ${TEMPFILE} | grep skb_release_data | grep -o kfree_skb.part`
-	if [ "$FUNCTION" == "kfree_skb.part" ];then
-		traceReport skb_release_data
+	if [ -e "$TEMPFILE" ];then
+		traceKfreeskb $TEMPFILE
+		traceOthers $TEMPFILE
+		rm $TEMPFILE
 	fi
-	sed -i '/skb_release_data/d' $TEMPFILE
 
-	#examine skb_release_head_state
-	FUNCTION=`cat ${TEMPFILE} | grep skb_release_head_state | grep -o kfree_skb.part`
-	if [ "$FUNCTION" == "kfree_skb.part" ];then
-		traceReport skb_release_head_state
-	fi
-	sed -i '/skb_release_head_state/d' $TEMPFILE
-
-	#detect dequeue_skb
-	RETVALUE=`cat ${TEMPFILE} | grep dequeue_skb | grep -o 'arg1=.*' | awk -F '=' '{print $2}'`
-	if [ "$RETVALUE" != "0x0" ];then
-		traceReport dequeue_skb
-	fi
-	sed -i '/dequeue_skb/d' $TEMPFILE
-
-	rm tracedata.tmp
 }
 
 detectDropping () {
@@ -158,11 +148,11 @@ detectDropping () {
 		kretprobeAddFunction $FUNCTION
 	done < functions 
 	#done < f7 
-	
+
 	traceOn && traceProcess
 	#traceOn && traceProcessDebug
 
-	
+
 
 }
 
@@ -170,7 +160,7 @@ main () {
 
 	SWITCH=1 	#set main function execute forever
 	SLEEPTIME=0.5
-	
+
 	echo -e "\033[31mDETECTING... \033[0m"
 
 	while [ $SWITCH = '1' ];
