@@ -158,8 +158,8 @@ detectDropping () {
 
 main () {
 
-	SWITCH=1 	#set main function execute forever
-	SLEEPTIME=0.5
+	local SWITCH=1 	#set main function execute forever
+	local SLEEPTIME=0.1
 
 	echo -e "\033[31mDETECTING... \033[0m"
 
