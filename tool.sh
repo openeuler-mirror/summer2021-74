@@ -68,7 +68,7 @@ traceProcessDebug () {
 
 traceKfreeskb() {
 	local TEMPFILE=kfreeskb.tmp
-
+	cat $1 | grep -o "${MYRETPROBE}.*" | grep '<- kfree_skb' | uniq | awk '{print $2}' | grep -oP '(\().*(\+)' | sed 's/(//;s/+//' > $TEMPFILE
 
 	if [ -e "$TEMPFILE" ];then
 		while read FUNCTION
