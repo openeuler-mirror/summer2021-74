@@ -7,7 +7,7 @@ MYRETPROBE_ENABLE=events/kprobes/myretprobe/enable
 KPROBE_EVENTS=kprobe_events
 MYRETPROBE=myretprobe
 
-traceInit () {
+kprobeInit () {
 
 	echo 0 > "${TRACE_DIR}/${TRACING_ON}"
 	if [ -e "${TRACE_DIR}/${MYRETPROBE_ENABLE}" ];then
@@ -17,7 +17,7 @@ traceInit () {
 	#echo '                  ---traceInit---                '
 }
 
-traceOn () {
+kprobeOn () {
 
 	echo 1 > "${TRACE_DIR}/${TRACING_ON}"
 	echo 1 > "${TRACE_DIR}/${MYRETPROBE_ENABLE}"
@@ -55,18 +55,18 @@ getFunctionName () {
 }
 !
 
-traceReport () {
+kprobeReport () {
 	local FUNCTIONNAME=$1
 	local DATE=`date --iso-8601='s'`
 	echo "[${DATE}]DROPPING DETECTED -----> ${FUNCTIONNAME}"
 }
 
-traceProcessDebug () {
+kprobeProcessDebug () {
 	tail -n +12 $TRACE_DIR/$TRACE | awk '{print $6,$8,$9}' | sed 's/(//; s/)//' | sort -n | uniq -c
 
 }
 
-traceKfreeskb() {
+kprobeKfreeskb() {
 	local TEMPFILE=kfreeskb.tmp
 	cat $1 | grep -o "${MYRETPROBE}.*" | grep '<- kfree_skb' | uniq | awk '{print $2}' | grep -oP '(\().*(\+)' | sed 's/(//;s/+//' > $TEMPFILE
 
@@ -80,7 +80,7 @@ traceKfreeskb() {
 		sed -i '/<- kfree_skb/d' $1
 	fi
 }
-traceOthers () {
+kprobeOthers () {
 	local TEMPFILE=others.tmp
 
 	cat $1 | awk '{print $6,$8,$9}' | sed 's/(//; s/)//' | sort -n | uniq -c > $TEMPFILE
@@ -114,7 +114,7 @@ traceOthers () {
 	fi
 }
 
-traceProcess () {
+kprobeProcess () {
 	#This function examine all suspicious functions 
 	#by processing raw trace log.
 
@@ -132,8 +132,8 @@ traceProcess () {
 	tail -n +12 $TRACE_DIR/$TRACE | grep $MYRETPROBE > $TEMPFILE
 
 	if [ -e "$TEMPFILE" ];then
-		traceKfreeskb $TEMPFILE
-		traceOthers $TEMPFILE
+		kprobeKfreeskb $TEMPFILE
+		#traceOthers $TEMPFILE
 		rm $TEMPFILE
 	fi
 
@@ -141,7 +141,7 @@ traceProcess () {
 
 detectDropping () {
 
-	traceInit && kretprobeDelFunction
+	kprobeInit && kretprobeDelFunction
 
 	while read FUNCTION
 	do
@@ -149,7 +149,7 @@ detectDropping () {
 	done < functions 
 	#done < f7 
 
-	traceOn && traceProcess
+	kprobeOn && kprobeProcess
 	#traceOn && traceProcessDebug
 
 
