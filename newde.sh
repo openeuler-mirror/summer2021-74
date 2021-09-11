@@ -36,7 +36,7 @@ function stopProgram () {
 }
 
 traceProcess () {
-	local AWKSCRIPT=extract.awk
+	local AWKSCRIPT=newde.awk
 	awk -f $AWKSCRIPT ${TRACE_DIR}/${TRACE_PIPE}
 }
 
