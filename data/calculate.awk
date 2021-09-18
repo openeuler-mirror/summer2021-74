@@ -2,7 +2,7 @@
 
 
 BEGIN {
-	DELAYTIME=10
+	DELAYTIME=100000
 	RECORD=0
 }
 
@@ -17,10 +17,9 @@ BEGIN {
 		PRO=int(RECORD)
 		RESULT=int(RETPRO-PRO)
 		#print RESULT 
-		#print RESULT 
 		#RESULT=int($4-$RECORD)
 		#print $RESULT
-		if ( $RESULT >= $DELAYTIME )
+		if ( RESULT >= DELAYTIME )
 			print RESULT/1000,"ms","\t",$6,$7,$8
 	}
 }
