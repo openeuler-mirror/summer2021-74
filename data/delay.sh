@@ -7,9 +7,6 @@ TRACING_ON=tracing_on
 MYRETPROBE_ENABLE=events/kprobes/myretprobe/enable
 KPROBE_EVENTS=kprobe_events
 MYRETPROBE=myretprobe
-SET_GRAPH_FUNCTION=set_graph_function
-TRACING_THRESH=tracing_thresh
-CURRENT_TRACER=current_tracer
 
 kprobeInit () {
 

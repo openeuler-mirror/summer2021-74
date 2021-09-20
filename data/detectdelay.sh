@@ -34,8 +34,17 @@ kprobeOn() {
 	if [[ -e "${TRACE_DIR}/${MYPROBE_ENABLE}" ]];then
 		echo 1 > "${TRACE_DIR}/${MYPROBE_ENABLE}"
 	else
-		echo "no kprobe event "
-	echo 1 > "${TRACE_DIR}/${MYRETPROBE_ENABLE}"
+		echo "no kprobe event"
+		exit -1
+	fi
+	
+	if [[ -e "${TRACE_DIR}/${MYRETPROBE_ENABLE}" ]];then
+		echo 1 > "${TRACE_DIR}/${MYRETPROBE_ENABLE}"
+	else
+		echo "no kretprobe event"
+		exit -1
+	fi
+
 	#echo '                  ---traceOn---                '
 }
 
@@ -107,7 +116,7 @@ readTracepipe() {
 	local DATA_DIR="data"
 	local FILENAME="tracedata_${COUNT}.tmp"
 
-	if [ $# -ne 1 ];then
+	if [[ $# -ne 1 ]];then
 		echo "function getTracepipe requires one parameter"
 		return -1
 	fi
@@ -141,14 +150,24 @@ getFunctionName () {
 	echo $1 | awk '{print $6}' | grep -oP '(\().*(\+)' | sed 's/(//;s/+//' 
 }
 !
+
+delayInit() {
+	kprobeInit
+	traceInit
+}
+
+delayOn() {
+	kprobeOn
+	traceOn
+}
+
 detectDelay() {
 	# execute awk script to print delay functions
 	local AWKSCRIPT=calculate.awk
 	
-	if [[ ! -e "${AWKSCRIPT}" ]];then
-		
+	if [[ -e "${AWKSCRIPT}" ]];then
+		awk -f $AWKSCRIPT $TRACE_DIR/$TRACE_PIPE
 	fi
-	awk -f $AWKCRIPT $TRACE_DIR/$TRACE_PIPE
 }
 
 kprobeReport() {
@@ -159,9 +178,6 @@ kprobeReport() {
 	echo -e "[${DATE}]\t${COUNT}\t${FUNCTIONNAME}"
 }
 
-kprobeProcess() {
-
-}
 
 cleanProcess() {
 	ps -auf | grep tool.sh | awk '{print "kill -9 "$2}' | sh
@@ -176,9 +192,9 @@ cleanTempfile() {
 exitProgram() {
 	echo -e "]\nperforming cleaning up"
 	cleanTempfile
-	bothInit
+	delayInit
 	echo "cleaned"
-	cleanProcess
+	#cleanProcess
 	exit 2
 }
 
@@ -187,10 +203,10 @@ main() {
 	local SWITCH=1
 
 	trap 'exitProgram' 2
-TRACE=trace
-TRACE_PIPE=trace_pipe
-TRACING_ON=tracing_on
-MYRETPROBE_ENABLE=events/kprobes/myretprobe/enable
-KPROBE_EVENTS=kprobe_events
-MYRETPROBE=myretprobe
-SET_GRAPH_FUNCTION=set_graph_function
+	delayInit
+	delayAddFunction
+	delayOn
+	detectDelay
+}
+
+main

@@ -13,7 +13,7 @@ CURRENT_TRACER=current_tracer
 
 kprobeInit () {
 
-	if [ -e "${TRACE_DIR}/${MYRETPROBE_ENABLE}" ];then
+	if [[ -e "${TRACE_DIR}/${MYRETPROBE_ENABLE}" ]];then
 		echo 0 > "${TRACE_DIR}/${MYRETPROBE_ENABLE}"
 	fi
 	echo > ${TRACE_DIR}/${KPROBE_EVENTS} 
@@ -70,7 +70,7 @@ kretprobeAddFunction () {
 	# add one function to kprobe_events
 
 	local FUNCTIONNAME=$1
-	if [ $# -ne 1 ];then
+	if [[ $# -ne 1 ]];then
 		echo "function kretprobeAddFunction requires one parameter"
 		return -1
 	fi
@@ -101,7 +101,7 @@ readTracepipe () {
 	local INTERVAL=0.1
 	local DATA_DIR="data"
 	local FILENAME="tracedata_${COUNT}.tmp"
-	if [ $# -ne 1 ];then
+	if [[ $# -ne 1 ]];then
 		echo "function getTracepipe requires one parameter"
 		return -1
 	fi
@@ -229,7 +229,7 @@ kprobeProcess () {
 	#tail -n +12 $TRACE_DIR/$TRACE | grep $MYRETPROBE > $TEMPFILE
 
 	local TRACEDATA=$1
-	if [ -e "${TRACEDATA}" ];then
+	if [[ -e "${TRACEDATA}" ]];then
 		kprobeKfreeskb $TRACEDATA
 		#traceOthers $TEMPFILE
 		#rm $TEMPFILE
@@ -247,7 +247,7 @@ dropProcess () {
 	NOTEMPTY=`wc -l ${TRACEDATA_NAME} | awk '{print $1}'`
 
 	#if [ -s $TRACEDATA_NAME ];then
-	if [ $NOTEMPTY -ne '0' ];then
+	if [[ "${NOTEMPTY}" -ne '0' ]];then
 		while read LINE
 		do
 			kprobeProcess $DATA_DIR/$LINE
@@ -263,11 +263,11 @@ dropDetect () {
 	local RES=0
 	local REPORT=1
 
-	while [ $SWITCH = "1" ];
+	while [[ "${SWITCH}" = "1" ]];
 	do
 		let RES=COUNT%15
 		
-		if [ $REPORT = "1" ];then
+		if [[ "${REPORT}" = "1" ]];then
 			clear
 			netstatReport
 			echo -e "\n"
@@ -276,10 +276,10 @@ dropDetect () {
 		getTracedata
 		dropProcess
 
-		if [ $? = "0" ];then
+		if [[ $? = "0" ]];then
 			let COUNT=COUNT+1
 			let RES=COUNT%15
-			if [ $RES = 0 ];then
+			if [[ "${RES}" = 0 ]];then
 				REPORT=1
 			else
 				REPORT=0
