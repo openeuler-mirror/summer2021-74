@@ -5,48 +5,66 @@ TRACE=trace
 TRACE_PIPE=trace_pipe
 TRACING_ON=tracing_on
 MYRETPROBE_ENABLE=events/kprobes/myretprobe/enable
+MYPROBE_ENABLE=events/kprobes/myprobe/enable
 KPROBE_EVENTS=kprobe_events
 MYRETPROBE=myretprobe
+MYPROBE=myprobe
 SET_GRAPH_FUNCTION=set_graph_function
 TRACING_THRESH=tracing_thresh
 CURRENT_TRACER=current_tracer
 
-kprobeInit () {
+function kprobeInit() {
 
-	if [[ -e "${TRACE_DIR}/${MYRETPROBE_ENABLE}" ]];then
-		echo 0 > "${TRACE_DIR}/${MYRETPROBE_ENABLE}"
-	fi
-	echo > ${TRACE_DIR}/${KPROBE_EVENTS} 
-	#echo '                  ---traceInit---                '
+        if [[ -e "${TRACE_DIR}/${MYPROBE_ENABLE}" ]];then
+                echo 0 > "${TRACE_DIR}/${MYPROBE_ENABLE}"
+        fi
+
+        if [[ -e "${TRACE_DIR}/${MYRETPROBE_ENABLE}" ]];then
+                echo 0 > "${TRACE_DIR}/${MYRETPROBE_ENABLE}"
+        fi
+
+        echo > "${TRACE_DIR}/${KPROBE_EVENTS}"
+        #echo '                  ---traceInit---                '
 }
 
-
-traceInit () {
+function traceInit() {
 	echo 0 > "${TRACE_DIR}/${TRACING_ON}"
 	timeout 0.1 cat "${TRACE_DIR}/${TRACE_PIPE}" > /dev/null
 	echo > "${TRACE_DIR}/${TRACE}"
 }
 
-functiongraphInit () {
+function functiongraphInit() {
 	echo nop > "${TRACE_DIR}/${CURRENT_TRACER}"
 	echo > "${TRACE_DIR}/${SET_GRAPH_FUNCTION}"
         echo 0 > "${TRACE_DIR}/${TRACING_THRESH}" 
 }
 
-bothInit () {
+function bothInit() {
 	# order of three functions shall not be changed
 	traceInit
 	kprobeInit
 	functiongraphInit
 }
 
-kprobeOn () {
+function kprobeOn() {
+        if [[ -e "${TRACE_DIR}/${MYPROBE_ENABLE}" ]];then
+                echo 1 > "${TRACE_DIR}/${MYPROBE_ENABLE}"
+        else
+                echo "no kprobe event"
+                exit -1
+        fi
 
-	echo 1 > "${TRACE_DIR}/${MYRETPROBE_ENABLE}"
-	#echo '                  ---traceOn---                '
+        if [[ -e "${TRACE_DIR}/${MYRETPROBE_ENABLE}" ]];then
+                echo 1 > "${TRACE_DIR}/${MYRETPROBE_ENABLE}"
+        else
+                echo "no kretprobe event"
+                exit -1
+        fi
+
+        #echo '                  ---traceOn---                '
 }
 
-functiongraphOn () {
+function functiongraphOn() {
 
 	local THRESH=100
 	echo udp_sendmsg > "${TRACE_DIR}/${SET_GRAPH_FUNCTION}"
@@ -55,19 +73,26 @@ functiongraphOn () {
         echo $THRESH > "${TRACE_DIR}/${TRACING_THRESH}" 
 }
 
-traceOn () {
+function traceOn() {
 	echo 1 > "${TRACE_DIR}/${TRACING_ON}"
 }
 
-bothOn () {
-	# order of functions shall not be changed
-	dropAddFunction && kprobeOn
-	functiongraphOn
-	traceOn
+function kprobeAddFunction() {
+        # add a kprobe function to kprobe_events
+
+        local FUNCTIONNAME=$1
+        if [[ $# -ne 1 ]];then
+                echo "function kprobeAddFunction requires one parameter"
+                return -1
+        fi
+
+        echo 'p:myprobe '$1'' >> "${TRACE_DIR}/${KPROBE_EVENTS}"
+
+        return 0
 }
 
-kretprobeAddFunction () {
-	# add one function to kprobe_events
+function kretprobeAddFunction() {
+	# add a kretprobe function to kprobe_events
 
 	local FUNCTIONNAME=$1
 	if [[ $# -ne 1 ]];then
@@ -81,21 +106,70 @@ kretprobeAddFunction () {
 
 }
 
-kretprobeDelFunction () {
+function kprobeDelFunction() {
+        # delete one probe entry in kprobe_events
+
+        # echo > "${TRACE_DIR}/${KPROBE_EVENTS}"
+        echo '-:myprobe' > "${TRACE_DIR}/${KPROBE_EVENTS}"
+}
+
+function kretprobeDelFunction() {
 	# delete one probe entry in kprobe_events
 
 	# echo > "${TRACE_DIR}/${KPROBE_EVENTS}"
 	echo '-:myretprobe' > "${TRACE_DIR}/${KPROBE_EVENTS}"
 }
 
-dropAddFunction () {
-	while read LINE
-	do
-		kretprobeAddFunction $LINE
-	done < functions
+function dropAddFunction() {
+        local DELAYFUNCTIONS=dropfunctions
+
+        if [[ -e "${DELAYFUNCTIONS}" ]];then
+		while read LINE
+		do
+			kretprobeAddFunction $LINE
+		done < dropfunctions
+	else
+		echo "no function for drop detection added"
+	fi
 }
 
-readTracepipe () {
+function delayAddFunction() {
+        local DELAYFUNCTIONS=delayfunctions
+
+        if [[ -e "${DELAYFUNCTIONS}" ]];then
+                while read LINE
+                do
+                        kprobeAddFunction $LINE
+                        kretprobeAddFunction $LINE
+                done < delayfunctions
+        else
+                echo "no function for delay detection added"
+        fi
+}
+
+function delayInit() {
+	#kprobeInit
+	#traceInit
+	bothInit
+}
+
+function delayOn() {
+	kprobeOn
+	traceOn
+}
+
+function dropInit() {
+	#kprobeInit
+	#traceInit
+	bothInit
+}
+
+function dropOn() {
+	kprobeOn
+	traceOn
+}
+
+function readTracepipe() {
 	# 
 	local COUNT=$1
 	local INTERVAL=0.1
@@ -108,7 +182,7 @@ readTracepipe () {
 	timeout $INTERVAL cat ${TRACE_DIR}/${TRACE_PIPE} > ${DATA_DIR}/${FILENAME}
 }
 
-getTracedata () {
+function getTracedata() {
 
 	local SWITCH=1
 	local COUNT=0
@@ -116,20 +190,8 @@ getTracedata () {
 	readTracepipe $COUNT
  
 }
-:<<!
-getTracedata () {
 
-	local SWITCH=1
-	local COUNT=0
-
-	while [ $SWITCH = "1" ];
-	do
-		readTracepipe $COUNT
-		let COUNT=(COUNT+1)%1000
-	done
-}
-!
-getTracedataName () {
+function getTracedataName() {
 	local DATA_DIR="data"
 	local TRACEDATA_NAME=tracedata_name.tmp
 	
@@ -147,7 +209,7 @@ getFunctionName () {
 }
 !
 
-kprobeReport () {
+function kprobeReport() {
 	local COUNT=$1
 	local FUNCTIONNAME=$2
 	local DATE=`date --iso-8601='s'`
@@ -155,12 +217,12 @@ kprobeReport () {
 	echo -e "[${DATE}]\t${COUNT}\t${FUNCTIONNAME}"
 }
 
-kprobeProcessDebug () {
+function kprobeProcessDebug() {
 	tail -n +12 $TRACE_DIR/$TRACE | awk '{print $6,$8,$9}' | sed 's/(//; s/)//' | sort -n | uniq -c
 
 }
 
-kprobeKfreeskb() {
+function kprobeKfreeskb() {
 	local TEMPFILE=kfreeskb.tmp
 	cat $1 | grep "${MYRETPROBE}" | grep -oP '(\().*(\+)' | sed 's/(//;s/+//' | uniq -c > $TEMPFILE
 	#cat $1 | grep "${MYRETPROBE}.*" | grep '<- kfree_skb' | uniq | awk '{print $5}' | grep -oP '(\().*(\+)' | sed 's/(//;s/+//' > $TEMPFILE
@@ -177,15 +239,16 @@ kprobeKfreeskb() {
 	fi
 }
 
-kprobeOthers () {
+function kprobeOthers() {
 	local TEMPFILE=others.tmp
 
 	cat $1 | awk '{print $6,$8,$9}' | sed 's/(//; s/)//' | sort -n | uniq -c > $TEMPFILE
 	#tail -n +12 $TRACE_DIR/$TRACE | awk '{print $6,$8,$9}' | sed 's/(//; s/)//' | sort -n | uniq -c > $TEMPFILE
-	if [ -e "${TEMPFILE}" ];then
-		#examine skb_release_data 
+	if [[ -e "${TEMPFILE}" ]];then
+		
+		# examine skb_release_data 
 		FUNCTION=`cat ${TEMPFILE} | grep skb_release_data | grep -o kfree_skb.part`
-		if [ "$FUNCTION" == "kfree_skb.part" ];then
+		if [[ "${FUNCTION}" == "kfree_skb.part" ]];then
 			traceReport skb_release_data
 		fi
 		sed -i '/skb_release_data/d' $TEMPFILE
@@ -193,7 +256,7 @@ kprobeOthers () {
 
 		#examine skb_release_head_state
 		FUNCTION=`cat ${TEMPFILE} | grep skb_release_head_state | grep -o kfree_skb.part`
-		if [ "$FUNCTION" == "kfree_skb.part" ];then
+		if [[ "${FUNCTION}" == "kfree_skb.part" ]];then
 			traceReport skb_release_head_state
 		fi
 		sed -i '/skb_release_head_state/d' $TEMPFILE
@@ -201,17 +264,17 @@ kprobeOthers () {
 
 		#detect dequeue_skb
 		RETVALUE=`cat ${TEMPFILE} | grep dequeue_skb | grep -o 'arg1=.*' | uniq | awk -F '=' '{print $2}'`
-		if [ "$RETVALUE" != "0x0" -a "$RETVALUE" != "" ];then
-			traceReport dequeue_skb
-		fi
-		sed -i '/dequeue_skb/d' $TEMPFILE
-		sed -i '/dequeue_skb/d' $1
+		#if [[ "${RETVALUE}" != "0x0" -a "${RETVALUE}" != "" ]];then
+		#	traceReport dequeue_skb
+		#fi
+		#sed -i '/dequeue_skb/d' $TEMPFILE
+		#sed -i '/dequeue_skb/d' $1
 
 		rm $TEMPFILE
 	fi
 }
 
-kprobeProcess () {
+function kprobeProcess() {
 	#This function examine all suspicious functions 
 	#by processing raw trace log.
 
@@ -237,7 +300,7 @@ kprobeProcess () {
 
 }
 
-dropProcess () {
+function dropProcess() {
 	local DATA_DIR=data
 	local TRACEDATA_NAME=tracedata_name.tmp
 	local NOTEMPTY=0
@@ -257,11 +320,65 @@ dropProcess () {
 	return 1
 }
 
-dropDetect () {
+:<<!
+function detectDropping() {
+
+	kprobeInit && kretprobeDelFunction
+
+	while read FUNCTION
+	do
+		kretprobeAddFunction $FUNCTION
+	done < functions 
+	#done < f7 
+
+	kprobeOn && kprobeProcess
+	#traceOn && traceProcessDebug
+}
+!
+
+function netstatReport() {
+	netstat -s -u | tail -n +3
+}
+
+function cleanProcess() {
+	ps -auf | grep tool.sh | awk '{print "kill -9 "$2}' | sh
+}
+
+function cleanTempfile() {
+	local DATA_DIR="data"
+	rm -f *.tmp
+	rm -f ${DATA_DIR}/*.tmp
+}
+
+function exitProgram() {
+	echo -e "]\nperforming cleaning up"
+	cleanTempfile
+	bothInit
+	echo "cleaned"
+	cleanProcess
+	exit 2
+}
+
+function displayUsage() {
+	echo "Usage: ${0} [-l|-d] [options]"
+       	echo "  $0 [-h|--help]"
+           
+	echo "      -l, --packetloss	Detect packet loss"
+	echo "      -d, --packetdelay	Detect packet delay"
+	echo "      -h, --help		Print this help message"
+}
+
+function detectDrop() {
 	local SWITCH=1
 	local COUNT=0
 	local RES=0
 	local REPORT=1
+
+
+	trap 'exitProgram' 2
+	echo -e "\033[31mDETECTING... \033[0m"
+	#bothInit && bothOn
+	dropInit && dropOn
 
 	while [[ "${SWITCH}" = "1" ]];
 	do
@@ -288,71 +405,39 @@ dropDetect () {
 	done
 }
 
-:<<!
-dropDetect () {
-	local SWITCH=1
-	local DATA_DIR=data
-	local TRACEDATA_NAME=tracedata_name.tmp
-	
-	while [ $SWITCH = "1" ];
-	do
-		getTracedataName
-		if [ -s $TRACEDATA_NAME ];then
-			while read LINE
-			do
-				kprobeProcess $DATA_DIR/$LINE
-			done < $TRACEDATA_NAME
-		fi
+function detectDelay() {
+        # execute awk script to print delay functions
+        local AWKSCRIPT=calculate.awk
+
+	delayInit && delayAddFunction
+
+        if [[ -e "${AWKSCRIPT}" ]];then
+                awk -f $AWKSCRIPT $TRACE_DIR/$TRACE_PIPE
+        fi
+}
+
+function main() {
+
+	GETOPT_PARSE=$(getopt --name "${0}" --longoptions help,packetloss,packetdelay, --options hld: -- "$@")
+
+	while true; do
+		case "${1}" in
+			-h|--help)
+				displayUsage
+				exit 0
+				;;
+			-l|--packetloss)
+				detectDrop
+				exitProgram
+				;;
+			-d|--packetdelay)
+				detectDelay
+				exitProgram
+				;;
+		esac
 	done
-}
-!
-detectDropping () {
 
-	kprobeInit && kretprobeDelFunction
-
-	while read FUNCTION
-	do
-		kretprobeAddFunction $FUNCTION
-	done < functions 
-	#done < f7 
-
-	kprobeOn && kprobeProcess
-	#traceOn && traceProcessDebug
-
-
-
-}
-
-netstatReport () {
-	netstat -s -u | tail -n +3
-}
-
-cleanProcess () {
-	ps -auf | grep tool.sh | awk '{print "kill -9 "$2}' | sh
-}
-
-cleanTempfile () {
-	local DATA_DIR="data"
-	rm -f *.tmp
-	rm -f ${DATA_DIR}/*.tmp
-}
-
-exitProgram () {
-	echo -e "]\nperforming cleaning up"
-	cleanTempfile
-	bothInit
-	echo "cleaned"
-	cleanProcess
-	exit 2
-}
-
-main () {
-	local SWITCH=1
-
-	trap 'exitProgram' 2
-	echo -e "\033[31mDETECTING... \033[0m"
-	bothInit && bothOn
-	dropDetect
+	#dropDetect
 
 }
 

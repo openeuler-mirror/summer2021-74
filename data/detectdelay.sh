@@ -206,7 +206,7 @@ main() {
 	delayInit
 	delayAddFunction
 	delayOn
-	detectDelay
+#	detectDelay
 }
 
 main
