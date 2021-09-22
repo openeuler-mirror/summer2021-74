@@ -53,7 +53,9 @@ function kprobeOn() {
                 echo "no kprobe event"
                 exit -1
         fi
+}
 
+function kretprobeOn() {
         if [[ -e "${TRACE_DIR}/${MYRETPROBE_ENABLE}" ]];then
                 echo 1 > "${TRACE_DIR}/${MYRETPROBE_ENABLE}"
         else
@@ -155,6 +157,7 @@ function delayInit() {
 
 function delayOn() {
 	kprobeOn
+	kretprobeOn
 	traceOn
 }
 
@@ -165,7 +168,7 @@ function dropInit() {
 }
 
 function dropOn() {
-	kprobeOn
+	kretprobeOn
 	traceOn
 }
 
@@ -213,6 +216,7 @@ function kprobeReport() {
 	local COUNT=$1
 	local FUNCTIONNAME=$2
 	local DATE=`date --iso-8601='s'`
+
 	#echo "[${DATE}]DROPPING DETECTED -----> ${FUNCTIONNAME}"
 	echo -e "[${DATE}]\t${COUNT}\t${FUNCTIONNAME}"
 }
@@ -224,6 +228,7 @@ function kprobeProcessDebug() {
 
 function kprobeKfreeskb() {
 	local TEMPFILE=kfreeskb.tmp
+
 	cat $1 | grep "${MYRETPROBE}" | grep -oP '(\().*(\+)' | sed 's/(//;s/+//' | uniq -c > $TEMPFILE
 	#cat $1 | grep "${MYRETPROBE}.*" | grep '<- kfree_skb' | uniq | awk '{print $5}' | grep -oP '(\().*(\+)' | sed 's/(//;s/+//' > $TEMPFILE
 	#cat $1 | grep -o "${MYRETPROBE}.*" | grep '<- kfree_skb' | uniq | grep -oP '(\().*(\+)' | sed 's/(//;s/+//' > $TEMPFILE
@@ -304,6 +309,7 @@ function dropProcess() {
 	local DATA_DIR=data
 	local TRACEDATA_NAME=tracedata_name.tmp
 	local NOTEMPTY=0
+
 	readTracepipe 0
 	getTracedataName
 
@@ -361,11 +367,11 @@ function exitProgram() {
 
 function displayUsage() {
 	echo "Usage: ${0} [-l|-d] [options]"
-       	echo "  $0 [-h|--help]"
+       	echo "  $0 [-h]"
            
-	echo "      -l, --packetloss	Detect packet loss"
-	echo "      -d, --packetdelay	Detect packet delay"
-	echo "      -h, --help		Print this help message"
+	echo "      -l		Detect packet loss"
+	echo "      -d	 	Detect packet delay"
+	echo "      -h		Print this help message"
 }
 
 function detectDrop() {
@@ -378,7 +384,9 @@ function detectDrop() {
 	trap 'exitProgram' 2
 	echo -e "\033[31mDETECTING... \033[0m"
 	#bothInit && bothOn
-	dropInit && dropOn
+	dropInit 
+	dropAddFunction
+       	dropOn
 
 	while [[ "${SWITCH}" = "1" ]];
 	do
@@ -407,36 +415,43 @@ function detectDrop() {
 
 function detectDelay() {
         # execute awk script to print delay functions
-        local AWKSCRIPT=calculate.awk
+        local AWKSCRIPT=delay.awk
 
-	delayInit && delayAddFunction
-
+	trap 'exitProgram' 2
+	echo -e "\033[31mDETECTING... \033[0m"
+	delayInit
+	delayAddFunction
+	delayOn
         if [[ -e "${AWKSCRIPT}" ]];then
                 awk -f $AWKSCRIPT $TRACE_DIR/$TRACE_PIPE
-        fi
+	else
+		echo "require awk script to perform delay detection"
+	fi
 }
 
 function main() {
 
-	GETOPT_PARSE=$(getopt --name "${0}" --longoptions help,packetloss,packetdelay, --options hld: -- "$@")
-
-	while true; do
-		case "${1}" in
-			-h|--help)
+:<<!
+	while getopts "hld" opt; do
+		case $opt in
+			h)
 				displayUsage
 				exit 0
 				;;
-			-l|--packetloss)
+			l)
 				detectDrop
 				exitProgram
 				;;
-			-d|--packetdelay)
+			d)
 				detectDelay
 				exitProgram
 				;;
 		esac
 	done
-
+!
+#displayUsage
+#detectDrop
+detectDelay
 	#dropDetect
 
 }
