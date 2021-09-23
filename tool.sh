@@ -416,6 +416,7 @@ function detectDrop() {
 function detectDelay() {
         # execute awk script to print delay functions
         local AWKSCRIPT=delay.awk
+        #local AWKSCRIPT=calculate.awk
 
 	trap 'exitProgram' 2
 	echo -e "\033[31mDETECTING... \033[0m"

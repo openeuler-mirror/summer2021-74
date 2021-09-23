@@ -2,7 +2,7 @@
 
 
 BEGIN {
-	DELAYTIME=100
+	DELAYTIME=10
 	TIMESTAMP=0
 	STACKINDEX=0
 }
@@ -48,7 +48,9 @@ BEGIN {
 		#RETPRO=int($4)
 		#PRO=int(TIMESTAMP)
 		#RESULT=int(RETPRO-PRO)
-		if ( RESULT >= DELAYTIME )
+		if ( RESULT >= DELAYTIME ){
+			gsub(/\(/, "", $6);
 			print RESULT/1000,"ms","\t",$6,$7,$8
+		}
 	}
 }
