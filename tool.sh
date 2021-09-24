@@ -212,12 +212,45 @@ getFunctionName () {
 }
 !
 
+function deeperProcess() {
+	echo "deeperProcess"
+	awk '{gsub(/\)/, "", $8); gsub(/arg1/,"retval", $9); if( $9 !~/0x0/ ) print $8,$9}' ${TRACE_DIR}/${TRACE_PIPE}
+}
+
+#function deeperReport() {
+#}
+
+
+function kprobeDeeper() {
+	local FUNCTIONNAME=$2
+
+	if [[ ! -n "$1" ]];then
+		echo "At least one parameter needed for kprobeDeeper!"
+		return -1
+	fi
+	#echo $FUNCTIONNAME
+	case $FUNCTIONNAME in
+		"__udp_queue_rcv_skb")
+			clear
+			dropInit
+			kretprobeAddFunction __udp_enqueue_schedule_skb
+			dropOn
+			deeperProcess
+			;;
+		"nf_hook_slow")
+			dropInit
+			kretprobeAddFunction nf_hook_entry_hookfn
+			dropOn
+			deeperProcess
+			;;
+	esac
+}
+
 function kprobeReport() {
 	local COUNT=$1
 	local FUNCTIONNAME=$2
 	local DATE=`date --iso-8601='s'`
-
-	#echo "[${DATE}]DROPPING DETECTED -----> ${FUNCTIONNAME}"
+	
 	echo -e "[${DATE}]\t${COUNT}\t${FUNCTIONNAME}"
 }
 
@@ -230,12 +263,12 @@ function kprobeKfreeskb() {
 	local TEMPFILE=kfreeskb.tmp
 
 	cat $1 | grep "${MYRETPROBE}" | grep -oP '(\().*(\+)' | sed 's/(//;s/+//' | uniq -c > $TEMPFILE
-	#cat $1 | grep "${MYRETPROBE}.*" | grep '<- kfree_skb' | uniq | awk '{print $5}' | grep -oP '(\().*(\+)' | sed 's/(//;s/+//' > $TEMPFILE
-	#cat $1 | grep -o "${MYRETPROBE}.*" | grep '<- kfree_skb' | uniq | grep -oP '(\().*(\+)' | sed 's/(//;s/+//' > $TEMPFILE
 
 	if [ -s "$TEMPFILE" ];then
 		while read FUNCTION
 		do
+			#echo $FUNCTION
+			kprobeDeeper $FUNCTION
 			kprobeReport $FUNCTION
 		done < $TEMPFILE
 
@@ -451,8 +484,8 @@ function main() {
 	done
 !
 #displayUsage
-#detectDrop
-detectDelay
+detectDrop
+#detectDelay
 	#dropDetect
 
 }
