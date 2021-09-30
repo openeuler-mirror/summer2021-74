@@ -12,6 +12,7 @@ MYPROBE=myprobe
 SET_GRAPH_FUNCTION=set_graph_function
 TRACING_THRESH=tracing_thresh
 CURRENT_TRACER=current_tracer
+GLOBALTHRESH=10000
 
 function kprobeInit() {
 
@@ -136,6 +137,22 @@ function dropAddFunction() {
 }
 
 function delayAddFunction() {
+	local FUNCTIONNAME="nop"
+	
+	FUNCTIONNAME=`cat /proc/kallsyms | grep udp_send_skb | awk '{print $3}'`
+	echo "p:myprobe ${FUNCTIONNAME} \$arg1" >> "${TRACE_DIR}/${KPROBE_EVENTS}"
+	echo "r:myretprobe ip_make_skb \$retval" >> "${TRACE_DIR}/${KPROBE_EVENTS}"
+	echo "p:myprobe dev_queue_xmit \$arg1" >> "${TRACE_DIR}/${KPROBE_EVENTS}"
+	FUNCTIONNAME=`cat /proc/kallsyms | grep xmit_one | awk '{print $3}'`
+	echo "p:myprobe ${FUNCTIONNAME} \$arg1" >> "${TRACE_DIR}/${KPROBE_EVENTS}"
+
+	#echo 'p:myprobe udp_send_skb.isra.0 $arg1' >> "${TRACE_DIR}/${KPROBE_EVENTS}"
+	#echo 'r:myretprobe ip_make_skb $retval' >> "${TRACE_DIR}/${KPROBE_EVENTS}"
+	#echo 'p:myprobe dev_queue_xmit $arg1' >> "${TRACE_DIR}/${KPROBE_EVENTS}"
+	#echo 'p:myprobe xmit_one.constprop.0 $arg1' >> "${TRACE_DIR}/${KPROBE_EVENTS}"
+}
+
+function consumptionAddFunction() {
         local DELAYFUNCTIONS=delayfunctions
 
         if [[ -e "${DELAYFUNCTIONS}" ]];then
@@ -149,9 +166,20 @@ function delayAddFunction() {
         fi
 }
 
-function delayInit() {
+function consumptionInit() {
 	#kprobeInit
 	#traceInit
+	bothInit
+}
+
+function consumptionOn() {
+	kprobeOn
+	kretprobeOn
+	traceOn
+}
+
+function delayInit() {
+	#kprobeInit
 	bothInit
 }
 
@@ -201,28 +229,14 @@ function getTracedataName() {
 	ls $DATA_DIR > $TRACEDATA_NAME
 
 }
-:<<!
-getFunctionName () {
-	if [ ! -n "$1" ];then
-		echo "At least one parameter needed for getFunctionName!"
-		return -1
-	fi
-
-	echo $1 | awk '{print $6}' | grep -oP '(\().*(\+)' | sed 's/(//;s/+//' 
-}
-!
 
 function deeperProcess() {
 	echo "deeperProcess"
 	awk '{gsub(/\)/, "", $8); gsub(/arg1/,"retval", $9); if( $9 !~/0x0/ ) print $8,$9}' ${TRACE_DIR}/${TRACE_PIPE}
 }
 
-#function deeperReport() {
-#}
-
-
 function kprobeDeeper() {
-	local FUNCTIONNAME=$2
+	local FUNCTIONNAME=$1
 
 	if [[ ! -n "$1" ]];then
 		echo "At least one parameter needed for kprobeDeeper!"
@@ -231,15 +245,22 @@ function kprobeDeeper() {
 	#echo $FUNCTIONNAME
 	case $FUNCTIONNAME in
 		"__udp_queue_rcv_skb")
-			clear
 			dropInit
 			kretprobeAddFunction __udp_enqueue_schedule_skb
 			dropOn
 			deeperProcess
 			;;
-		"nf_hook_slow")
+		"udp_read_sock")
 			dropInit
-			kretprobeAddFunction nf_hook_entry_hookfn
+			kretprobeAddFunction recv_actor
+			dropOn
+			deeperProcess
+			;;
+		"udp_queue_rcv_one_skb")
+			# dropping if the queue is full
+			dropInit
+			kretprobeAddFunction xfrm4_policy_check
+			kretprobeAddFunction sk_filter_trim_cap 
 			dropOn
 			deeperProcess
 			;;
@@ -267,12 +288,13 @@ function kprobeKfreeskb() {
 	if [ -s "$TEMPFILE" ];then
 		while read FUNCTION
 		do
-			#echo $FUNCTION
-			kprobeDeeper $FUNCTION
-			kprobeReport $FUNCTION
+			local FUNCTIONNAME=`echo $FUNCTION | awk '{print $2}'`
+			kprobeDeeper $FUNCTIONNAME
+			if [[ ${FUNCTIONNAME} != "inet_recvmsg" ]];then
+				kprobeReport $FUNCTION
+			fi
 		done < $TEMPFILE
 
-		#rm $TEMPFILE
 		sed -i '/<- kfree_skb/d' $1
 	fi
 }
@@ -359,22 +381,6 @@ function dropProcess() {
 	return 1
 }
 
-:<<!
-function detectDropping() {
-
-	kprobeInit && kretprobeDelFunction
-
-	while read FUNCTION
-	do
-		kretprobeAddFunction $FUNCTION
-	done < functions 
-	#done < f7 
-
-	kprobeOn && kprobeProcess
-	#traceOn && traceProcessDebug
-}
-!
-
 function netstatReport() {
 	netstat -s -u | tail -n +3
 }
@@ -394,17 +400,20 @@ function exitProgram() {
 	cleanTempfile
 	bothInit
 	echo "cleaned"
-	cleanProcess
+	#cleanProcess
 	exit 2
 }
 
 function displayUsage() {
-	echo "Usage: ${0} [-l|-d] [options]"
-       	echo "  $0 [-h]"
-           
-	echo "      -l		Detect packet loss"
-	echo "      -d	 	Detect packet delay"
-	echo "      -h		Print this help message"
+	echo "Usage: ${0} 	[ -t | --thresh ] time"
+	echo "		  	[ -d | --delay ] [ -c | --consumption ]"
+	echo "		  	[ -l | --loss ] [ -h | --help ]"
+	echo ""
+	echo "      -t, --thresh	Set time thresh, default is 10000us"
+	echo "      -d, --delay	 	Detect udp functions delay"
+	echo "      -c, --consumption	Examine single function time consumption"
+	echo "      -l, --loss		Detect packet loss"
+	echo "      -h, --help		Print this help message"
 }
 
 function detectDrop() {
@@ -415,7 +424,7 @@ function detectDrop() {
 
 
 	trap 'exitProgram' 2
-	echo -e "\033[31mDETECTING... \033[0m"
+	echo -e "\033[31mDROP DETECTING... \033[0m"
 	#bothInit && bothOn
 	dropInit 
 	dropAddFunction
@@ -447,47 +456,91 @@ function detectDrop() {
 }
 
 function detectDelay() {
-        # execute awk script to print delay functions
-        local AWKSCRIPT=delay.awk
-        #local AWKSCRIPT=calculate.awk
+	local AWKSCRIPT=delay.awk
+	local THRESH=10000
+
+	if [[ $# -eq 1 ]];then
+		THRESH=$1
+	fi
+	echo $THRESH
 
 	trap 'exitProgram' 2
-	echo -e "\033[31mDETECTING... \033[0m"
+	echo -e "\033[31mDELAY DETECTING... \033[0m"
 	delayInit
 	delayAddFunction
 	delayOn
+
         if [[ -e "${AWKSCRIPT}" ]];then
-                awk -f $AWKSCRIPT $TRACE_DIR/$TRACE_PIPE
+                awk -v DELAYTIME=$THRESH -f $AWKSCRIPT $TRACE_DIR/$TRACE_PIPE
 	else
 		echo "require awk script to perform delay detection"
 	fi
 }
 
-function main() {
+function examineConsumption() {
+        # execute awk script to print delay functions
+        local AWKSCRIPT=consumption.awk
+        #local AWKSCRIPT=calculate.awk
+	local THRESH=10000
 
-:<<!
-	while getopts "hld" opt; do
-		case $opt in
-			h)
-				displayUsage
-				exit 0
-				;;
-			l)
-				detectDrop
-				exitProgram
-				;;
-			d)
-				detectDelay
-				exitProgram
-				;;
-		esac
-	done
-!
-#displayUsage
-detectDrop
-#detectDelay
-	#dropDetect
-
+	if [[ $# -eq 1 ]];then
+		THRESH=$1
+	fi
+	trap 'exitProgram' 2
+	echo -e "\033[31mCONSUMPTION EXAMINING... \033[0m"
+	consumptionInit
+	consumptionAddFunction
+	consumptionOn
+        if [[ -e "${AWKSCRIPT}" ]];then
+                awk -v DELAYTIME=$THRESH -f $AWKSCRIPT $TRACE_DIR/$TRACE_PIPE
+	else
+		echo "require awk script to perform delay detection"
+	fi
 }
 
-main
+PARSED_ARGUMENTS=$(getopt -n tool -o t:hldc --long thresh:,help,loss,delay,consumption -- "$@")
+VALID_ARGUMENTS=$?
+
+if [[ "${VALID_ARGUMENTS}" != "0" ]];then
+	displayUsage
+	exit 0
+fi
+
+eval set -- "${PARSED_ARGUMENTS}"
+
+while :
+do
+	case "$1" in
+		-t | --thresh)
+			GLOBALTHRESH=$2
+			shift 2
+			;;
+		-h | --help)
+			displayUsage
+			exit 0
+			;;
+		-l | --loss)
+			detectDrop
+			exit 0
+			;;
+		-d | --delay)
+			if [[ $2 == "-t" || $2 == "--thresh" ]];then
+				GLOBALTHRESH=$3
+			fi
+			detectDelay $GLOBALTHRESH
+			exit 0
+			;;
+		-c | --consumption)
+			if [[ $2 == "-t" || $2 == "--thresh" ]];then
+				GLOBALTHRESH=$3
+			fi
+			examineConsumption $GLOBALTHRESH
+			exit 0
+			;;
+		*)
+			displayUsage
+			exit 0
+			;;
+	esac
+done
+

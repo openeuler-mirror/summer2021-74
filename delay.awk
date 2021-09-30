@@ -2,55 +2,47 @@
 
 
 BEGIN {
-	DELAYTIME=10
+	#DELAYTIME=10000
 	TIMESTAMP=0
-	STACKINDEX=0
 }
 
 {
+	# modify the format of timestamp (delete '.' and ':')
 	gsub(/:/, "", $4);
 	gsub(/\./, "", $4);
-	
 
-	if( $0 ~ /myprobe/ ){
 
-		gsub(/+.*/, "",$6);
-		gsub(/\(/, "", $6);
-		
-		FUNCTIONNAME=$6
+	if( $0 ~ /myretprobe/ ){
+
+		gsub(/arg1=/, "", $9);
+		SKBADDR=$9
 		TIMESTAMP=$4
 
-		TARRAY[STACKINDEX]=TIMESTAMP
-		FARRAY[STACKINDEX]=FUNCTIONNAME
-		STACKINDEX++
-		
-	}else if( $0 ~ /myretprobe/ ){
-		gsub(/)/, "", $8);
+		ADDRTIMEMAP["${SKBADDR}"]=TIMESTAMP
 
-		RETFUNCTIONNAME=$8
-		
-		while(STACKINDEX >= 0){
-			STACKINDEX--
-			if(RETFUNCTIONNAME == FARRAY[STACKINDEX]){
-				RETPRO=int($4)
-				PRO=int(TARRAY[STACKINDEX])
-				#PRO=int(TIMESTAMP)
-				RESULT=int(RETPRO-PRO)
-				#print STACKINDEX
-				break
+	} else if( $0 ~ /myprobe/ ){
+
+		gsub(/arg1=/, "", $7);
+		SKBADDR=$7
+		TIMESTAMP=$4
+
+		if("${SKBADDR}" in ADDRTIMEMAP){
+			PRO=int(TIMESTAMP)
+			RETPRO=int(ADDRTIMEMAP["${SKBADDR}"])
+			RESULT=int(PRO-RETPRO)
+
+			FUNCTIONNAME=$6
+			ADDRTIMEMAP["${SKBADDR}"]=TIMESTAMP
+
+			if ( RESULT >= DELAYTIME ){
+				if( FUNCTIONNAME ~ /udp_send_skb/ ){
+					print "skb address:",SKBADDR," ip_make_skb -> udp_send_skb","\t\t "RESULT/1000,"ms"
+				} else if ( FUNCTIONNAME ~ /dev_queue_xmit/ ){
+					print "skb address:",SKBADDR," udp_send_skb -> dev_queue_xmit","\t",RESULT/1000,"ms"
+				} else if ( FUNCTIONNAME ~ /xmit_one/ ){
+					print "skb address:",SKBADDR," dev_queue_xmit -> xmit_one","\t\t "RESULT/1000,"ms"
+				}
 			}
-
-		}
-		###################################################
-		# 	calculate difference of timestamp         #
-		###################################################
-
-		#RETPRO=int($4)
-		#PRO=int(TIMESTAMP)
-		#RESULT=int(RETPRO-PRO)
-		if ( RESULT >= DELAYTIME ){
-			gsub(/\(/, "", $6);
-			print RESULT/1000,"ms","\t",$6,$7,$8
 		}
 	}
 }
