@@ -206,6 +206,10 @@ function readTracepipe() {
 	local INTERVAL=0.1
 	local DATA_DIR="data"
 	local FILENAME="tracedata_${COUNT}.tmp"
+
+	if [[ ! -d "${DATA_DIR}" ]];then
+		mkdir $DATA_DIR
+	fi	
 	if [[ $# -ne 1 ]];then
 		echo "function getTracepipe requires one parameter"
 		return -1
@@ -392,7 +396,7 @@ function cleanProcess() {
 function cleanTempfile() {
 	local DATA_DIR="data"
 	rm -f *.tmp
-	rm -f ${DATA_DIR}/*.tmp
+	#rm -f ${DATA_DIR}/*.tmp
 }
 
 function exitProgram() {
@@ -491,6 +495,7 @@ function examineConsumption() {
 	consumptionInit
 	consumptionAddFunction
 	consumptionOn
+
         if [[ -e "${AWKSCRIPT}" ]];then
                 awk -v DELAYTIME=$THRESH -f $AWKSCRIPT $TRACE_DIR/$TRACE_PIPE
 	else
