@@ -1,7 +1,9 @@
-# Summer2021-No.74 利用kprobe等工具实现快速定位网络丢包和时延问题的工具
+# 利用kprobe等工具实现快速定位网络丢包和时延问题的工具
 
 #### 介绍
 https://gitee.com/openeuler-competition/summer-2021/issues/I3ESBZ
+
+Summer2021-No.74 
 
 本项目旨在实现一个快速定位网络丢包和时延问题的工具。目前工具可以准确定位UDP接收丢包和发送丢包在Linux内核函数的具体位置,也可以实现初步的时延检测，并给出时延时间。
 
@@ -70,7 +72,7 @@ iperf -c 192.168.226.128 -u -b 10000M -P 4
 
 ##### 丢包场景3-反向路由
 
-该过程相对复杂，请参考本仓库中的“reverse pathing filter.txt”文件
+该过程相对复杂，请参考www.tinymema.cn中记录的文章或者本仓库中的“reverse pathing filter.txt”文件
 
 #### 时延检测
 
